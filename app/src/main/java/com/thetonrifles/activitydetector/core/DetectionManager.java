@@ -1,5 +1,6 @@
-package com.thetonrifles.activitydetector;
+package com.thetonrifles.activitydetector.core;
 
+import android.app.IntentService;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -10,6 +11,9 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.ActivityRecognition;
+import com.google.android.gms.location.ActivityRecognitionResult;
+import com.thetonrifles.activitydetector.LogTags;
+import com.thetonrifles.activitydetector.MainActivity;
 
 /**
  * Singleton class for encapsulating activity
@@ -18,9 +22,9 @@ import com.google.android.gms.location.ActivityRecognition;
 public class DetectionManager implements GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener {
 
-    private static final String LOG_TAG = "DetectionManager";
-
     private static final long UPDATE_PERIOD = 10000l;  // 10 seconds
+
+    // singleton implementation
 
     private static DetectionManager instance;
 
@@ -31,15 +35,23 @@ public class DetectionManager implements GoogleApiClient.ConnectionCallbacks,
         return instance;
     }
 
+    private long mUpdatePeriod;
+
     private DetectionManager() {
+        mUpdatePeriod = UPDATE_PERIOD;
     }
 
     private GoogleApiClient mActivityRecognitionClient;
 
     private PendingIntent mCallbackIntent;
 
+    public void start(Context context, long updatePeriod) {
+        mUpdatePeriod = updatePeriod;
+        start(context);
+    }
+
     public void start(Context context) {
-        Log.d(LOG_TAG, "activity recognition manager start");
+        Log.d(LogTags.SERVICE, "detection started with update period: " + mUpdatePeriod + " millis");
         int status = GooglePlayServicesUtil.isGooglePlayServicesAvailable(context);
         if (status == ConnectionResult.SUCCESS) {
             Intent intent = new Intent(context, DetectionService.class);
@@ -54,7 +66,7 @@ public class DetectionManager implements GoogleApiClient.ConnectionCallbacks,
     }
 
     public void halt() {
-        Log.d(LOG_TAG, "activity recognition manager stop");
+        Log.d(LogTags.SERVICE, "activity recognition manager stop");
         if (mActivityRecognitionClient != null && mActivityRecognitionClient.isConnected()) {
             ActivityRecognition.ActivityRecognitionApi.removeActivityUpdates(
                     mActivityRecognitionClient, mCallbackIntent);
@@ -71,12 +83,46 @@ public class DetectionManager implements GoogleApiClient.ConnectionCallbacks,
 
     @Override
     public void onConnectionFailed(ConnectionResult connectionResult) {
-        Log.e(LOG_TAG, "connection failure");
+        Log.e(LogTags.SERVICE, "connection failure");
     }
 
     @Override
     public void onConnectionSuspended(int i) {
-        Log.e(LOG_TAG, "connection suspended");
+        Log.e(LogTags.SERVICE, "connection suspended");
+    }
+
+    /**
+     * Intent Service used for receiving activity recognition
+     * updates from Google Play Services.
+     */
+    public static class DetectionService extends IntentService {
+
+        public DetectionService() {
+            super("DetectionService");
+        }
+
+        @Override
+        protected void onHandleIntent(Intent intent) {
+            Log.d(LogTags.SERVICE, "handling activity recognition intent");
+            if (ActivityRecognitionResult.hasResult(intent)) {
+                ActivityRecognitionResult result = ActivityRecognitionResult.extractResult(intent);
+                sendNotification(result);
+            }
+        }
+
+        /**
+         * Support method for delivering received activity recognition to UI.
+         */
+        private void sendNotification(ActivityRecognitionResult result) {
+            Log.d(LogTags.SERVICE, "detected activity " + result.toString());
+            // building intent to deliver to UI
+            Intent intent = new Intent();
+            intent.setAction(MainActivity.ActivityReceiver.NEW_ACTIVITY_ACTION);
+            intent.putExtra(MainActivity.ActivityReceiver.NEW_ACTIVITY_PARAM, new DetectionItem(result));
+            // delivering data to UI
+            sendBroadcast(intent);
+        }
+
     }
 
 }

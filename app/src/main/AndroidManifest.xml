@@ -23,7 +23,7 @@
             </intent-filter>
         </activity>
         <service
-            android:name=".DetectionService"
+            android:name=".core.DetectionManager$DetectionService"
             android:exported="false" />
         <receiver
             android:name=".MainActivity$ActivityReceiver" />

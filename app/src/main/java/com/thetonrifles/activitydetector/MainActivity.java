@@ -14,7 +14,8 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.thetonrifles.activitydetector.controls.DividerItemDecoration;
-import com.thetonrifles.activitydetector.model.DetectionItem;
+import com.thetonrifles.activitydetector.core.DetectionManager;
+import com.thetonrifles.activitydetector.core.DetectionItem;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -110,7 +111,7 @@ public class MainActivity extends AppCompatActivity {
         public void onBindViewHolder(ItemViewHolder holder, int position) {
             DetectionItem item = mItems.get(position);
             holder.title.setText(item.getMostProbableActivity());
-            holder.subtitle.setText(item.getActivities().toString());
+            holder.subtitle.setText(item.getActivitiesWithConfidence().toString());
         }
 
         @Override
