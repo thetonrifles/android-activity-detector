@@ -55,7 +55,7 @@ public class MainActivity extends AppCompatActivity {
         // populating list
         mItemsAdapter = new ItemsAdapter();
         mItemsView.setLayoutManager(getLayoutManager());
-        mItemsView.addItemDecoration(getItemDecoration());
+        //mItemsView.addItemDecoration(getItemDecoration());
         mItemsView.setAdapter(mItemsAdapter);
     }
 
@@ -96,8 +96,8 @@ public class MainActivity extends AppCompatActivity {
 
         public ItemViewHolder(View view) {
             super(view);
-            title = (TextView) view.findViewById(android.R.id.text1);
-            subtitle = (TextView) view.findViewById(android.R.id.text2);
+            title = (TextView) view.findViewById(R.id.txt_title);
+            subtitle = (TextView) view.findViewById(R.id.txt_subtitle);
         }
 
         @Override
@@ -128,7 +128,7 @@ public class MainActivity extends AppCompatActivity {
                 holder.title.setText(item.getActivity());
                 holder.subtitle.setText(item.getTimestamp());
             } else {
-                holder.title.setText("-");
+                holder.title.setText("");
                 holder.subtitle.setText("");
             }
         }
@@ -136,8 +136,13 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public ItemViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             LayoutInflater inflater = LayoutInflater.from(parent.getContext());
-            View itemView = inflater.inflate(android.R.layout.simple_list_item_2, parent, false);
-            return new ItemViewHolder(itemView);
+            if (viewType == ListItemType.NEW_ACTIVITY.ordinal()) {
+                View itemView = inflater.inflate(R.layout.view_new_detection_item, parent, false);
+                return new ItemViewHolder(itemView);
+            } else {
+                View itemView = inflater.inflate(R.layout.view_same_detection_item, parent, false);
+                return new ItemViewHolder(itemView);
+            }
         }
 
     }
