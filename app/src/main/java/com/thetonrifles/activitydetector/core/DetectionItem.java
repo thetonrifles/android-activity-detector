@@ -118,8 +118,8 @@ public class DetectionItem implements Comparable<DetectionItem>, Serializable {
         // equality is based on activities-confidences only
         boolean equals = true;
         // getting all activities
-        String[] current = activities.entrySet().toArray(new String[]{});
-        String[] other = ((DetectionItem) o).activities.entrySet().toArray(new String[]{});
+        String[] current = activities.keySet().toArray(new String[]{});
+        String[] other = ((DetectionItem) o).activities.keySet().toArray(new String[]{});
         // same number of activities in both objects?
         if (current.length == other.length) {
             // comparing with iteration is enough because we are

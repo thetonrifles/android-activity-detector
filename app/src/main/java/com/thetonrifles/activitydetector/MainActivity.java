@@ -55,7 +55,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        registerReceiver(mNewItemReceiver, new IntentFilter(ActivityReceiver.NEW_ACTIVITY_ACTION));
+        registerReceiver(mNewItemReceiver, new IntentFilter(DetectionManager.NEW_DETECTION));
+        DetectionManager.getInstance().fireAllEvents(false);
         DetectionManager.getInstance().start(this);
     }
 
@@ -128,14 +129,10 @@ public class MainActivity extends AppCompatActivity {
      */
     public class ActivityReceiver extends BroadcastReceiver {
 
-        public static final String NEW_ACTIVITY_ACTION =
-                "com.thetonrifles.activitydetector.NEW_ACTIVITY";
-
-        public static final String NEW_ACTIVITY_PARAM = "new_activity";
-
         @Override
         public void onReceive(Context context, Intent intent) {
-            DetectionItem item = (DetectionItem) intent.getSerializableExtra(NEW_ACTIVITY_PARAM);
+            DetectionItem item = (DetectionItem) intent.getSerializableExtra(
+                    DetectionManager.DETECTED_ACTIVITY);
             mItems.add(item);
             mItemsAdapter.notifyItemInserted(mItems.size() - 1);
         }

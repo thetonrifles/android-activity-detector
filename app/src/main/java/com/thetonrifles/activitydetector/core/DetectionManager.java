@@ -13,7 +13,6 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.ActivityRecognition;
 import com.google.android.gms.location.ActivityRecognitionResult;
 import com.thetonrifles.activitydetector.LogTags;
-import com.thetonrifles.activitydetector.MainActivity;
 
 /**
  * Singleton class for encapsulating activity
@@ -21,6 +20,10 @@ import com.thetonrifles.activitydetector.MainActivity;
  */
 public class DetectionManager implements GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener {
+
+    public static final String NEW_DETECTION = "com.thetonrifles.activitydetector.NEW_DETECTION";
+
+    public static final String DETECTED_ACTIVITY = "com.thetonrifles.activitydetector.NEW_ACTIVITY";
 
     private static final long UPDATE_PERIOD = 10000l;  // 10 seconds
 
@@ -35,21 +38,49 @@ public class DetectionManager implements GoogleApiClient.ConnectionCallbacks,
         return instance;
     }
 
+    /**
+     * Last detected value.
+     */
+    private static DetectionItem _LAST_DETECTION;
+
+    /**
+     * Lock for accessing last detection object.
+     */
+    private static Object _LAST_DETECTION_LOCK = new Object();
+
+    /**
+     * If true, all activity recognition events
+     * are fired, regardless of their value. If
+     * false, an event is not fired if previous one
+     * is equal to it.
+     */
+    private static boolean _NOTIFY_ALL_EVENTS;
+
+    /**
+     * Update period for activity recognition.
+     */
     private long mUpdatePeriod;
+
+    /**
+     * Play Services API Client to be used for handling
+     * activity recognition.
+     */
+    private GoogleApiClient mActivityRecognitionClient;
+
+    /**
+     * Callback to be used for handling new detection
+     * coming from Play Services.
+     */
+    private PendingIntent mCallbackIntent;
 
     private DetectionManager() {
         mUpdatePeriod = UPDATE_PERIOD;
+        _NOTIFY_ALL_EVENTS = true;
     }
 
-    private GoogleApiClient mActivityRecognitionClient;
-
-    private PendingIntent mCallbackIntent;
-
-    public void start(Context context, long updatePeriod) {
-        mUpdatePeriod = updatePeriod;
-        start(context);
-    }
-
+    /**
+     * Start manager with default update period.
+     */
     public void start(Context context) {
         Log.d(LogTags.SERVICE, "detection started with update period: " + mUpdatePeriod + " millis");
         int status = GooglePlayServicesUtil.isGooglePlayServicesAvailable(context);
@@ -65,6 +96,25 @@ public class DetectionManager implements GoogleApiClient.ConnectionCallbacks,
         }
     }
 
+    /**
+     * Define update period. This method must be invoked
+     * before start() for having effect.
+     */
+    public void setUpdatePeriod(long updatePeriod) {
+        mUpdatePeriod = updatePeriod;
+    }
+
+    /**
+     * Define whether to fire all events or just
+     * consecutive different ones.
+     */
+    public void fireAllEvents(boolean fireAllEvents) {
+        _NOTIFY_ALL_EVENTS = fireAllEvents;
+    }
+
+    /**
+     * Stop manager deallocating resources.
+     */
     public void halt() {
         Log.d(LogTags.SERVICE, "activity recognition manager stop");
         if (mActivityRecognitionClient != null && mActivityRecognitionClient.isConnected()) {
@@ -106,19 +156,44 @@ public class DetectionManager implements GoogleApiClient.ConnectionCallbacks,
             Log.d(LogTags.SERVICE, "handling activity recognition intent");
             if (ActivityRecognitionResult.hasResult(intent)) {
                 ActivityRecognitionResult result = ActivityRecognitionResult.extractResult(intent);
-                sendNotification(result);
+                Log.d(LogTags.SERVICE, "detected activity " + result.toString());
+                synchronized (_LAST_DETECTION_LOCK) {
+                    // building detection
+                    DetectionItem detection = new DetectionItem(result);
+                    // notification to be delivered?
+                    if (_LAST_DETECTION == null) {
+                        Log.d(LogTags.SERVICE, "first detection... need to notify!");
+                        sendNotification(detection);
+                    } else {
+                        if (_NOTIFY_ALL_EVENTS) {
+                            Log.d(LogTags.SERVICE, "all events to be notified... let's proceed!");
+                            sendNotification(detection);
+                        } else {
+                            if (!_LAST_DETECTION.equals(detection)) {
+                                Log.d(LogTags.SERVICE, "new detection... need to notify!");
+                                sendNotification(detection);
+                            } else {
+                                Log.d(LogTags.SERVICE, "same detection as before... no need to notify!");
+                            }
+                        }
+                    }
+                    // update last detection
+                    _LAST_DETECTION = detection;
+                }
+            } else {
+                Log.d(LogTags.SERVICE, "null activity recognition intent");
             }
         }
 
         /**
          * Support method for delivering received activity recognition to UI.
          */
-        private void sendNotification(ActivityRecognitionResult result) {
-            Log.d(LogTags.SERVICE, "detected activity " + result.toString());
+        private void sendNotification(DetectionItem detection) {
+            Log.d(LogTags.SERVICE, "notifying detection...");
             // building intent to deliver to UI
             Intent intent = new Intent();
-            intent.setAction(MainActivity.ActivityReceiver.NEW_ACTIVITY_ACTION);
-            intent.putExtra(MainActivity.ActivityReceiver.NEW_ACTIVITY_PARAM, new DetectionItem(result));
+            intent.setAction(NEW_DETECTION);
+            intent.putExtra(DETECTED_ACTIVITY, detection);
             // delivering data to UI
             sendBroadcast(intent);
         }
