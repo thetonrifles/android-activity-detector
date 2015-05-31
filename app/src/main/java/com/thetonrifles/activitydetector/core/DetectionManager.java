@@ -23,7 +23,9 @@ public class DetectionManager implements GoogleApiClient.ConnectionCallbacks,
 
     public static final String NEW_DETECTION = "com.thetonrifles.activitydetector.NEW_DETECTION";
 
-    public static final String DETECTED_ACTIVITY = "com.thetonrifles.activitydetector.NEW_ACTIVITY";
+    public static final String SAME_DETECTION = "com.thetonrifles.activitydetector.SAME_DETECTION";
+
+    public static final String DETECTED_ACTIVITY = "com.thetonrifles.activitydetector.DETECTED_ACTIVITY";
 
     private static final long UPDATE_PERIOD = 10000l;  // 10 seconds
 
@@ -49,14 +51,6 @@ public class DetectionManager implements GoogleApiClient.ConnectionCallbacks,
     private static Object _LAST_DETECTION_LOCK = new Object();
 
     /**
-     * If true, all activity recognition events
-     * are fired, regardless of their value. If
-     * false, an event is not fired if previous one
-     * is equal to it.
-     */
-    private static boolean _NOTIFY_ALL_EVENTS;
-
-    /**
      * Update period for activity recognition.
      */
     private long mUpdatePeriod;
@@ -75,7 +69,6 @@ public class DetectionManager implements GoogleApiClient.ConnectionCallbacks,
 
     private DetectionManager() {
         mUpdatePeriod = UPDATE_PERIOD;
-        _NOTIFY_ALL_EVENTS = true;
     }
 
     /**
@@ -102,14 +95,6 @@ public class DetectionManager implements GoogleApiClient.ConnectionCallbacks,
      */
     public void setUpdatePeriod(long updatePeriod) {
         mUpdatePeriod = updatePeriod;
-    }
-
-    /**
-     * Define whether to fire all events or just
-     * consecutive different ones.
-     */
-    public void fireAllEvents(boolean fireAllEvents) {
-        _NOTIFY_ALL_EVENTS = fireAllEvents;
     }
 
     /**
@@ -162,20 +147,11 @@ public class DetectionManager implements GoogleApiClient.ConnectionCallbacks,
                     DetectionItem detection = new DetectionItem(result);
                     // notification to be delivered?
                     if (_LAST_DETECTION == null) {
-                        Log.d(LogTags.SERVICE, "first detection... need to notify!");
-                        sendNotification(detection);
+                        Log.d(LogTags.SERVICE, "first detection... notify new event!");
+                        sendEventNotification(detection, true);
                     } else {
-                        if (_NOTIFY_ALL_EVENTS) {
-                            Log.d(LogTags.SERVICE, "all events to be notified... let's proceed!");
-                            sendNotification(detection);
-                        } else {
-                            if (!_LAST_DETECTION.equals(detection)) {
-                                Log.d(LogTags.SERVICE, "new detection... need to notify!");
-                                sendNotification(detection);
-                            } else {
-                                Log.d(LogTags.SERVICE, "same detection as before... no need to notify!");
-                            }
-                        }
+                        boolean isNew = !_LAST_DETECTION.equals(detection);
+                        sendEventNotification(detection, isNew);
                     }
                     // update last detection
                     _LAST_DETECTION = detection;
@@ -186,13 +162,22 @@ public class DetectionManager implements GoogleApiClient.ConnectionCallbacks,
         }
 
         /**
-         * Support method for delivering received activity recognition to UI.
+         * Support method for broadcasting received activity.
          */
-        private void sendNotification(DetectionItem detection) {
+        private void sendEventNotification(DetectionItem detection, boolean isNew) {
+            if (isNew) {
+                Log.d(LogTags.SERVICE, "new detection... notify new event!");
+            } else {
+                Log.d(LogTags.SERVICE, "same detection as before... notify same event!");
+            }
             Log.d(LogTags.SERVICE, "notifying detection...");
             // building intent to deliver to UI
             Intent intent = new Intent();
-            intent.setAction(NEW_DETECTION);
+            if (isNew) {
+                intent.setAction(NEW_DETECTION);
+            } else {
+                intent.setAction(SAME_DETECTION);
+            }
             intent.putExtra(DETECTED_ACTIVITY, detection);
             // delivering data to UI
             sendBroadcast(intent);

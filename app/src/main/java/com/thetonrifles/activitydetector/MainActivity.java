@@ -13,9 +13,13 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import com.thetonrifles.activitydetector.adapter.AbstractDetectionItem;
+import com.thetonrifles.activitydetector.adapter.ListItemType;
+import com.thetonrifles.activitydetector.adapter.NewDetectionItem;
+import com.thetonrifles.activitydetector.adapter.SameDetectionItem;
 import com.thetonrifles.activitydetector.controls.DividerItemDecoration;
-import com.thetonrifles.activitydetector.core.DetectionManager;
 import com.thetonrifles.activitydetector.core.DetectionItem;
+import com.thetonrifles.activitydetector.core.DetectionManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,9 +31,11 @@ public class MainActivity extends AppCompatActivity {
     private ItemsAdapter mItemsAdapter;
 
     // business objects
-    private List<DetectionItem> mItems;
+    private List<AbstractDetectionItem> mItems;
 
-    private ActivityReceiver mNewItemReceiver;
+    // broadcast receivers
+    private NewActivityReceiver mNewItemReceiver;
+    private SameActivityReceiver mSameItemReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,7 +49,8 @@ public class MainActivity extends AppCompatActivity {
         mItems = new ArrayList<>();
 
         // defining receiver for new items
-        mNewItemReceiver = new ActivityReceiver();
+        mNewItemReceiver = new NewActivityReceiver();
+        mSameItemReceiver = new SameActivityReceiver();
 
         // populating list
         mItemsAdapter = new ItemsAdapter();
@@ -56,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         registerReceiver(mNewItemReceiver, new IntentFilter(DetectionManager.NEW_DETECTION));
-        DetectionManager.getInstance().fireAllEvents(false);
+        registerReceiver(mSameItemReceiver, new IntentFilter(DetectionManager.SAME_DETECTION));
         DetectionManager.getInstance().start(this);
     }
 
@@ -64,6 +71,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onStop() {
         super.onStop();
         unregisterReceiver(mNewItemReceiver);
+        unregisterReceiver(mSameItemReceiver);
         DetectionManager.getInstance().halt();
     }
 
@@ -104,15 +112,25 @@ public class MainActivity extends AppCompatActivity {
     private class ItemsAdapter extends RecyclerView.Adapter<ItemViewHolder> {
 
         @Override
+        public int getItemViewType(int position) {
+            return mItems.get(position).getType().ordinal();
+        }
+
+        @Override
         public int getItemCount() {
             return mItems.size();
         }
 
         @Override
         public void onBindViewHolder(ItemViewHolder holder, int position) {
-            DetectionItem item = mItems.get(position);
-            holder.title.setText(item.getMostProbableActivity());
-            holder.subtitle.setText(item.getActivitiesWithConfidence().toString());
+            AbstractDetectionItem item = mItems.get(position);
+            if (item.getType() == ListItemType.NEW_ACTIVITY) {
+                holder.title.setText(item.getActivity());
+                holder.subtitle.setText(item.getTimestamp());
+            } else {
+                holder.title.setText("-");
+                holder.subtitle.setText("");
+            }
         }
 
         @Override
@@ -126,14 +144,31 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Broadcast Receiver for handling activity recognition updates
+     * including new detection if compared with latest tracked one.
      */
-    public class ActivityReceiver extends BroadcastReceiver {
+    public class NewActivityReceiver extends BroadcastReceiver {
 
         @Override
         public void onReceive(Context context, Intent intent) {
             DetectionItem item = (DetectionItem) intent.getSerializableExtra(
                     DetectionManager.DETECTED_ACTIVITY);
-            mItems.add(item);
+            mItems.add(new NewDetectionItem(item));
+            mItemsAdapter.notifyItemInserted(mItems.size() - 1);
+        }
+
+    }
+
+    /**
+     * Broadcast Receiver for handling activity recognition updates
+     * including detection of same activity as the latest tracked one.
+     */
+    public class SameActivityReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            DetectionItem item = (DetectionItem) intent.getSerializableExtra(
+                    DetectionManager.DETECTED_ACTIVITY);
+            mItems.add(new SameDetectionItem(item));
             mItemsAdapter.notifyItemInserted(mItems.size() - 1);
         }
 
