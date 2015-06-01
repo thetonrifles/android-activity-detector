@@ -14,6 +14,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.thetonrifles.activitydetector.adapter.AbstractDetectionItem;
+import com.thetonrifles.activitydetector.adapter.EndDetectionItem;
 import com.thetonrifles.activitydetector.adapter.ListItemType;
 import com.thetonrifles.activitydetector.adapter.NewDetectionItem;
 import com.thetonrifles.activitydetector.adapter.SameDetectionItem;
@@ -36,6 +37,7 @@ public class MainActivity extends AppCompatActivity {
     // broadcast receivers
     private NewActivityReceiver mNewItemReceiver;
     private SameActivityReceiver mSameItemReceiver;
+    private EndActivityReceiver mEndItemReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
         // defining receiver for new items
         mNewItemReceiver = new NewActivityReceiver();
         mSameItemReceiver = new SameActivityReceiver();
+        mEndItemReceiver = new EndActivityReceiver();
 
         // populating list
         mItemsAdapter = new ItemsAdapter();
@@ -64,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
         super.onStart();
         registerReceiver(mNewItemReceiver, new IntentFilter(DetectionManager.NEW_DETECTION));
         registerReceiver(mSameItemReceiver, new IntentFilter(DetectionManager.SAME_DETECTION));
+        registerReceiver(mEndItemReceiver, new IntentFilter(DetectionManager.END_DETECTION));
         DetectionManager.getInstance().start(this);
     }
 
@@ -72,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
         super.onStop();
         unregisterReceiver(mNewItemReceiver);
         unregisterReceiver(mSameItemReceiver);
+        unregisterReceiver(mEndItemReceiver);
         DetectionManager.getInstance().halt();
     }
 
@@ -126,10 +131,12 @@ public class MainActivity extends AppCompatActivity {
             AbstractDetectionItem item = mItems.get(position);
             if (item.getType() == ListItemType.NEW_ACTIVITY) {
                 holder.title.setText(item.getActivity());
-                holder.subtitle.setText(item.getTimestamp());
-            } else {
+                holder.subtitle.setText(item.getStart());
+            } else if (item.getType() == ListItemType.SAME_ACTIVITY) {
                 holder.title.setText("");
                 holder.subtitle.setText("");
+            } else {
+                holder.title.setText(item.getDuration());
             }
         }
 
@@ -139,8 +146,11 @@ public class MainActivity extends AppCompatActivity {
             if (viewType == ListItemType.NEW_ACTIVITY.ordinal()) {
                 View itemView = inflater.inflate(R.layout.view_new_detection_item, parent, false);
                 return new ItemViewHolder(itemView);
-            } else {
+            } else if (viewType == ListItemType.SAME_ACTIVITY.ordinal()) {
                 View itemView = inflater.inflate(R.layout.view_same_detection_item, parent, false);
+                return new ItemViewHolder(itemView);
+            } else {
+                View itemView = inflater.inflate(R.layout.view_end_detection_item, parent, false);
                 return new ItemViewHolder(itemView);
             }
         }
@@ -174,6 +184,22 @@ public class MainActivity extends AppCompatActivity {
             DetectionItem item = (DetectionItem) intent.getSerializableExtra(
                     DetectionManager.DETECTED_ACTIVITY);
             mItems.add(new SameDetectionItem(item));
+            mItemsAdapter.notifyItemInserted(mItems.size() - 1);
+        }
+
+    }
+
+    /**
+     * Broadcast Receiver for handling activity recognition updates
+     * including detection of activity end.
+     */
+    public class EndActivityReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            DetectionItem item = (DetectionItem) intent.getSerializableExtra(
+                    DetectionManager.DETECTED_ACTIVITY);
+            mItems.add(new EndDetectionItem(item));
             mItemsAdapter.notifyItemInserted(mItems.size() - 1);
         }
 

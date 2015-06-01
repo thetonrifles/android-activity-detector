@@ -18,8 +18,12 @@ public abstract class AbstractDetectionItem {
         return mDetection.getMostProbableActivity();
     }
 
-    public String getTimestamp() {
-        return formatTimestamp(mDetection.getTimestamp());
+    public String getStart() {
+        return formatTimestamp(mDetection.getStart());
+    }
+
+    public String getDuration() {
+        return "" + mDetection.getDuration() / 1000l + "s";
     }
 
     protected String formatTimestamp(long timestamp) {

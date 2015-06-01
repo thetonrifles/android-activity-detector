@@ -18,7 +18,8 @@ public class DetectionItem implements Comparable<DetectionItem>, Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private long timestamp;
+    private long start;
+    private long duration;
     private Map<String,Integer> activities;
 
     /**
@@ -34,19 +35,27 @@ public class DetectionItem implements Comparable<DetectionItem>, Serializable {
      */
     public DetectionItem(ActivityRecognitionResult result) {
         this();
-        setTimestamp(new Date().getTime());
+        setStart(new Date().getTime());
         for (DetectedActivity activity : result.getProbableActivities()) {
             addActivity(getActivityType(activity), activity.getConfidence());
         }
 
     }
 
-    public long getTimestamp() {
-        return timestamp;
+    public long getStart() {
+        return start;
     }
 
-    public void setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
+    public void setStart(long start) {
+        this.start = start;
+    }
+
+    public long getDuration() {
+        return duration;
+    }
+
+    public void setDuration(long duration) {
+        this.duration = duration;
     }
 
     public List<String> getActivities() {
@@ -139,10 +148,10 @@ public class DetectionItem implements Comparable<DetectionItem>, Serializable {
 
     @Override
     public int compareTo(DetectionItem other) {
-        // sorting is timestamp based
-        Long currentTimestamp = timestamp;
-        Long otherTimestamp = other.timestamp;
-        return currentTimestamp.compareTo(otherTimestamp);
+        // sorting is start time based
+        Long currentStart = start;
+        Long otherStart = other.start;
+        return currentStart.compareTo(otherStart);
     }
 
 }

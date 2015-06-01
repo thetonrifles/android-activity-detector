@@ -25,6 +25,8 @@ public class DetectionManager implements GoogleApiClient.ConnectionCallbacks,
 
     public static final String SAME_DETECTION = "com.thetonrifles.activitydetector.SAME_DETECTION";
 
+    public static final String END_DETECTION = "com.thetonrifles.activitydetector.END_DETECTION";
+
     public static final String DETECTED_ACTIVITY = "com.thetonrifles.activitydetector.DETECTED_ACTIVITY";
 
     private static final long UPDATE_PERIOD = 10000l;  // 10 seconds
@@ -149,12 +151,22 @@ public class DetectionManager implements GoogleApiClient.ConnectionCallbacks,
                     if (_LAST_DETECTION == null) {
                         Log.d(LogTags.SERVICE, "first detection... notify new event!");
                         sendEventNotification(detection, true);
+                        // update last detection
+                        _LAST_DETECTION = detection;
                     } else {
                         boolean isNew = !_LAST_DETECTION.equals(detection);
+                        // is new detection?
+                        if (isNew) {
+                            // let's notify end of previous activity
+                            long duration = System.currentTimeMillis() - _LAST_DETECTION.getStart();
+                            _LAST_DETECTION.setDuration(duration);
+                            sendEndEventNotification(_LAST_DETECTION);
+                            // update last detection
+                            _LAST_DETECTION = detection;
+                        }
+                        // notifying event
                         sendEventNotification(detection, isNew);
                     }
-                    // update last detection
-                    _LAST_DETECTION = detection;
                 }
             } else {
                 Log.d(LogTags.SERVICE, "null activity recognition intent");
@@ -178,6 +190,16 @@ public class DetectionManager implements GoogleApiClient.ConnectionCallbacks,
             } else {
                 intent.setAction(SAME_DETECTION);
             }
+            intent.putExtra(DETECTED_ACTIVITY, detection);
+            // delivering data to UI
+            sendBroadcast(intent);
+        }
+
+        private void sendEndEventNotification(DetectionItem detection) {
+            Log.d(LogTags.SERVICE, "notifying detection end...");
+            // building intent to deliver to UI
+            Intent intent = new Intent();
+            intent.setAction(END_DETECTION);
             intent.putExtra(DETECTED_ACTIVITY, detection);
             // delivering data to UI
             sendBroadcast(intent);
