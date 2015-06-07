@@ -100,6 +100,17 @@ public class DetectionManager implements GoogleApiClient.ConnectionCallbacks,
     }
 
     /**
+     * Return last detected activity.
+     */
+    public DetectionItem getLastDetection() {
+        DetectionItem item;
+        synchronized (_LAST_DETECTION_LOCK) {
+            item = _LAST_DETECTION;
+        }
+        return item;
+    }
+
+    /**
      * Stop manager deallocating resources.
      */
     public void halt() {

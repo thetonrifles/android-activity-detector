@@ -27,6 +27,10 @@
             android:exported="false" />
         <receiver
             android:name=".MainActivity$NewActivityReceiver" />
+        <receiver
+            android:name=".MainActivity$SameActivityReceiver" />
+        <receiver
+            android:name=".MainActivity$EndActivityReceiver" />
 
     </application>
 
