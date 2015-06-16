@@ -16,9 +16,7 @@ notifications:
   email: false
 
 before_install:
-
-  # for gradle output style
+  - chmod +x gradlew
   - export TERM=dumb
 
-# Let's try to build...
 script: ./gradlew clean build
