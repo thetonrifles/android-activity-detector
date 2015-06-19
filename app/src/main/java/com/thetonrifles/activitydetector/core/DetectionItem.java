@@ -18,6 +18,15 @@ public class DetectionItem implements Comparable<DetectionItem>, Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    public static final String TYPE_VEHICLE = "vehicle";
+    public static final String TYPE_BICYCLE = "on_bicycle";
+    public static final String TYPE_FOOT = "on_foot";
+    public static final String TYPE_WALKING = "walking";
+    public static final String TYPE_RUNNING = "running";
+    public static final String TYPE_STILL = "still";
+    public static final String TYPE_TILTING = "tilting";
+    public static final String TYPE_UNKNOWN = "unknown";
+
     private long start;
     private long duration;
     private Map<String,Integer> activities;
@@ -95,28 +104,28 @@ public class DetectionItem implements Comparable<DetectionItem>, Serializable {
      * its Google Play Services wrapper.
      */
     private String getActivityType(DetectedActivity activity) {
-        String type = "unknown";
+        String type = TYPE_UNKNOWN;
         switch (activity.getType()) {
             case DetectedActivity.IN_VEHICLE:
-                type = "vehicle";
+                type = TYPE_VEHICLE;
                 break;
             case DetectedActivity.ON_BICYCLE:
-                type = "on_bicycle";
+                type = TYPE_BICYCLE;
                 break;
             case DetectedActivity.ON_FOOT:
-                type = "on_foot";
+                type = TYPE_FOOT;
                 break;
             case DetectedActivity.WALKING:
-                type = "walking";
+                type = TYPE_WALKING;
                 break;
             case DetectedActivity.RUNNING:
-                type = "running";
+                type = TYPE_RUNNING;
                 break;
             case DetectedActivity.STILL:
-                type = "still";
+                type = TYPE_STILL;
                 break;
             case DetectedActivity.TILTING:
-                type = "tilting";
+                type = TYPE_TILTING;
                 break;
         }
         return type;
@@ -124,6 +133,7 @@ public class DetectionItem implements Comparable<DetectionItem>, Serializable {
 
     @Override
     public boolean equals(Object o) {
+        /*
         // equality is based on activities-confidences only
         boolean equals = true;
         // getting all activities
@@ -144,6 +154,11 @@ public class DetectionItem implements Comparable<DetectionItem>, Serializable {
             equals = false;
         }
         return equals;
+        */
+        DetectionItem other = (DetectionItem) o;
+        String activity = getMostProbableActivity();
+        return Math.abs(getConfidence(activity) -
+                other.getConfidence(activity)) <= 25;
     }
 
     @Override

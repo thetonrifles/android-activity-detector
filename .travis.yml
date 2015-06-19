@@ -21,4 +21,4 @@ before_install:
   - chmod +x gradlew
   - export TERM=dumb
 
-script: ./gradlew assembleDebug
+script: ./gradlew assembleDebugAndroidTest
